@@ -59,8 +59,32 @@ struct Profile {
 
 #[cfg(test)]
 mod tests {
+    use std::net::UdpSocket;
     use bson::doc;
+    use run_script::run_script;
+    use testcontainers::{clients, GenericImage, RunnableImage};
     use super::*;
+
+    fn generate_port_number() -> u16 {
+        let address = "0.0.0.0:0";
+        let socket = UdpSocket::bind(address).expect("Cannot bind to socket");
+        let local_addr = socket.local_addr().expect("Cannot get local address");
+        local_addr.port()
+    }
+
+    fn get_mongo_image(&port: &u16) -> RunnableImage<GenericImage> {
+        let image = GenericImage::new(
+            "mongo".to_string(),
+            "5.0.6".to_string(),
+        );
+        RunnableImage::from(image).with_mapped_port((port, 27017))
+    }
+
+    fn populate_test_data(&port: &u16) {
+        let formatted_command = format!(r#" bash ./tests/test_data/import.sh {} {}"#, "0.0.0.0", port);
+        run_script!(formatted_command).expect("Cannot seed MongoDB data");
+    }
+
     fn get_db_connection_uri(&port: &u16) -> String {
         format!("mongodb://{}:{}", "0.0.0.0", port)
     }
@@ -68,9 +92,14 @@ mod tests {
     #[tokio::test(flavor = "multi_thread")]
     async fn find_a_document_by_version_when_one_exists() {
         // Arrange
-        let uri = get_db_connection_uri(&27017);
-
+        let docker = clients::Cli::default();
+        let port = generate_port_number();
+        let mongo_img = get_mongo_image(&port);
+        let _c = docker.run(mongo_img);
+        populate_test_data(&port);
+        let uri = get_db_connection_uri(&port);
         let db = MongoDBClient::init(uri, "users".to_string()).await;
+
         let collection = "profiles".to_string();
         let expected_name = "oliver.bannister".to_string();
         let expected_age = 24;
@@ -87,13 +116,17 @@ mod tests {
         assert_eq!(age, expected_age);
         assert_eq!(location, expected_location);
     }
-
     #[tokio::test(flavor = "multi_thread")]
     async fn find_another_document_by_version_when_one_exists() {
         // Arrange
-        let uri = get_db_connection_uri(&27017);
-
+        let docker = clients::Cli::default();
+        let port = generate_port_number();
+        let mongo_img = get_mongo_image(&port);
+        let _c = docker.run(mongo_img);
+        populate_test_data(&port);
+        let uri = get_db_connection_uri(&port);
         let db = MongoDBClient::init(uri, "users".to_string()).await;
+
         let collection = "profiles".to_string();
         let expected_name = "john.doe".to_string();
         let expected_age = 35;
@@ -110,5 +143,4 @@ mod tests {
         assert_eq!(age, expected_age);
         assert_eq!(location, expected_location);
     }
-
 }

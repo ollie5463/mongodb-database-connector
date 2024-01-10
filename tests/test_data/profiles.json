@@ -1,0 +1,15 @@
+[{
+  "_id": {
+    "$oid": "659e79f831f22dc0395699b2"
+  },
+  "name": "oliver.bannister",
+  "age": 24,
+  "location": "Toronto"
+},{
+  "_id": {
+    "$oid": "659e7a1e31f22dc0395699b3"
+  },
+  "name": "john.doe",
+  "age": 35,
+  "location": "London"
+}]
