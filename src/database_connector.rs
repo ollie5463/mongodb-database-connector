@@ -4,7 +4,6 @@ use mongodb::Client;
 use mongodb::options::{ClientOptions, ServerApi, ServerApiVersion};
 use serde::de::DeserializeOwned;
 
-
 #[async_trait]
 pub(crate) trait DocumentDatabaseConnector {
     async fn init(db_uri: String, db_name: String) -> Self;
@@ -49,6 +48,13 @@ impl DocumentDatabaseConnector for MongoDBClient {
             None
         });
     }
+}
+
+#[derive(serde::Deserialize, serde::Serialize, Debug)]
+struct Profile {
+    name: String,
+    age: i32,
+    location: String
 }
 
 #[cfg(test)]
